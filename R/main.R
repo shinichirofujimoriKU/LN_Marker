@@ -540,7 +540,7 @@ f_fig_line1 <- function(v_name, v_var) {
     scale_x_discrete(breaks=c(df_define$year1[!is.na(df_define$year1)],df_define$ar6_database[!is.na(df_define$ar6_database)]))+
     scale_colour_manual(values=c(df_define$color_scenario)) +
     ylab("") + xlab("Year") + theme1 
-  png(paste(v_path["fig_main"],"/",v_name,"_line.png",sep=""), width = length(v_var)/2*1400+450, height = 3200,res = 300)
+  png(paste(v_path["fig_main"],"/",v_name,"_line.png",sep=""), width = length(v_var)/2*1800+450, height = 3200,res = 300)
   print(p)
   dev.off()
 }
@@ -706,7 +706,7 @@ p<-ggplot() +
   scale_x_discrete(breaks=c(df_define$year1[!is.na(df_define$year1)]))+
   ylab("") + xlab("") + labs(fill = "Category", linetype = "") + theme1 +theme(legend.position="bottom")+guides(fill = guide_legend(ncol = 2),linetype = guide_legend(ncol = 1))
   scale_x_discrete(breaks=df_define$year1[!is.na(df_define$year1)])
-png(paste(v_path["fig_main"],"/",v_name,"area_.png",sep=""), width = length(df_define$marker_scenario[!is.na(df_define$marker_scenario)])*700, height = 2400+length(v_area)*20,res = 300)
+png(paste(v_path["fig_main"],"/",v_name,"area_.png",sep=""), width = length(df_define$marker_scenario[!is.na(df_define$marker_scenario)])*800, height = 2400+length(v_area)*20,res = 300)
 print(p)
 dev.off()
 }
