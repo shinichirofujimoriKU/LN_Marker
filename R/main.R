@@ -544,7 +544,7 @@ f_fig_line1 <- function(v_name, v_var) {
   print(p)
   dev.off()
 }
-f_fig_line2 <- function(v_name, v_var) {
+f_fig_line2 <- function(v_name, v_var, v_zero=TRUE) {
   df_fig1<-filter(df_snap,Variable %in% v_var, 
                   Model=="AIM", Region=="World",
                   Scenario_SSP %in% df_define$marker_scenario[!is.na(df_define$marker_scenario)])%>%
@@ -561,7 +561,7 @@ f_fig_line2 <- function(v_name, v_var) {
   df_fig4<-filter(df_AR6,Variable %in% v_var, Region=="World", Year=="2100")%>%
     mutate(Variable = factor(Variable,levels=v_var))
   p<-ggplot() +
-    geom_point(data = df_dummy, aes(x=Year,y=Value), alpha=0)+
+    {if (v_zero) geom_point(data = df_dummy, aes(x=Year,y=Value), alpha=0)}+
     geom_line(data=df_fig1,aes(x=Year,y=Value,group=Scenario_SSP,color=Scenario),linewidth=0.8,alpha=0.9)+
     geom_line(data=df_fig2,aes(x=Year,y=Value,group=interaction(Scenario_SSP,Model),color=Scenario),linewidth=0.2,alpha=0.6,linetype="solid")+
     geom_ribbon(data=df_fig3,aes(x=Year,ymin=min,ymax=max, group=Scenario,),alpha=0.1,fill=df_define$color_scenario["LN"]) +
@@ -791,6 +791,7 @@ f_fig_line1("Air_Pollutant_Ratio",df_variable$air_pollutant_energy_ratio[!is.na(
 f_fig_line2("Primary_Energy","Primary Energy")
 f_fig_line2("Final_Energy","Final Energy")
 f_fig_line2("Agricultural_Production","Agricultural Production")
+f_fig_line2("Food_Agriculture",c(df_variable$food[!is.na(df_variable$food)],"Agricultural Production"), v_zero=FALSE)
 f_fig_line3("Food_Availability",df_variable$food[!is.na(df_variable$food)])
 f_fig_line4("Economic_indicator",df_variable$economic_impact[!is.na(df_variable$economic_impact)])
 f_fig_line6("CDR_CCS",df_variable$CDR_CCS[!is.na(df_variable$CDR_CCS)], v_nrow=2)
@@ -817,5 +818,6 @@ f_fig_bar("Agricultural_Production",df_variable$agricultural_production[!is.na(d
 f_tab("GHG",df_variable$GHG[!is.na(df_variable$GHG)])
 f_tab("CO2",df_variable$CO2_sector[!is.na(df_variable$CO2_sector)])
 f_tab("SDG",df_variable$sdg[!is.na(df_variable$sdg)])
+f_tab("Food_Agriculture",c(df_variable$food[!is.na(df_variable$food)],"Agricultural Production"))
 
 
