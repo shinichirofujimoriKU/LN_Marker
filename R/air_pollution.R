@@ -714,7 +714,9 @@ paper_dir <- f_paper_dir(file.path(project_dir, "output", "figure", "paper"))
 p_paper_a <- p_position
 p_paper_a$layers[[2]]$aes_params$linewidth <- 0.35
 p_paper_a$layers[[3]]$aes_params$linewidth <- 0.8
+# strips with subscripted formulas (e.g. Mt SO2/yr)
 p_paper_a <- p_paper_a +
+  facet_wrap(vars(Panel), scales = "free_y", ncol = 4, labeller = f_chem_labeller(one_line = TRUE)) +
   labs(caption = NULL, x = NULL, colour = "Scenario (AIM)") +
   scale_y_continuous(
     labels = function(x) format(x, big.mark = ",", drop0trailing = TRUE, trim = TRUE),
@@ -733,6 +735,7 @@ p_paper_a <- p_paper_a +
 p_paper_b <- p_composition
 p_paper_b$layers[[2]]$aes_params$linewidth <- 0.35
 p_paper_b <- p_paper_b +
+  facet_wrap(vars(Panel), scales = "free_y", ncol = 4, labeller = f_chem_labeller(one_line = TRUE)) +
   labs(caption = NULL, x = NULL) +
   scale_y_continuous(
     labels = function(x) format(x, big.mark = ",", drop0trailing = TRUE, trim = TRUE),

@@ -1115,6 +1115,13 @@ p_fig8_line <- f_paper_lines(v_fig8_var,
                                "Final energy, carbon management","Electricity price"),
                              use_AR6 = FALSE, use_dummy = FALSE, zero_line = FALSE,
                              v_ylabs = c(v_rel2020, v_rel2020, v_rel2020, v_rel2020, "EJ/yr", v_rel2020))
+#(f) electricity price without WITCH: its reported LN electricity price is
+#effectively zero (~1e-8 USD/GJ), so its 2020-indexed series is numerical noise
+#that would drag the multi-model range below zero
+p_fig8_line[[6]] <- f_panel_line(df_snap, v_fig8_var[6], "Electricity price", v_col_scenario,
+                                 f_scen_present(df_snap, v_fig8_var, v_marker, v_scen_all),
+                                 v_marker, v_year1, zero_line = FALSE, v_ylab = v_rel2020,
+                                 v_drop_model = "WITCH")
 p_fig8 <- wrap_plots(p_fig8_line, ncol = 3) + plot_layout(guides = "collect") + f_tags() & f_legend_bottom()
 f_save_paper(p_fig8, "Figure8", 13, v_fig_paper)
 

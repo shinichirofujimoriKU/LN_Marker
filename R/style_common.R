@@ -102,6 +102,56 @@ theme_x90 <- function() {
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 }
 
+# Chemical formulas ------------------------------------------------------------
+
+# Displayed text writes CO2, CH4, N2O, SO2, NO2 and NH3 with real subscripts.
+# Unicode subscript digits are not used: Arial has no glyphs for them and the
+# cairo PDF shows empty boxes, so the subscripts are set with plotmath.
+# Only displayed labels are converted; data variable names are left as they are.
+v_chem_re <- "CO2|CH4|N2O|SO2|NO2|NH3"
+
+# one line of text -> plotmath source, e.g. "Gt CO2/yr" -> "Gt CO"[2]*"/yr"
+f_chem_line <- function(s) {
+  q <- function(x) encodeString(x, quote = '"')
+  m <- gregexpr(v_chem_re, s)[[1]]
+  if (m[1] == -1) return(q(s))
+  v_len <- attr(m, "match.length")
+  v_parts <- character()
+  v_pos <- 1
+  for (k in seq_along(m)) {
+    if (m[k] > v_pos) v_parts <- c(v_parts, q(substr(s, v_pos, m[k] - 1)))
+    v_tok <- substr(s, m[k], m[k] + v_len[k] - 1)
+    i <- regexpr("[0-9]", v_tok)
+    v_piece <- paste0(q(substr(v_tok, 1, i - 1)), "[", substr(v_tok, i, i), "]")
+    if (i < nchar(v_tok)) v_piece <- paste0(v_piece, "*", q(substr(v_tok, i + 1, nchar(v_tok))))
+    v_parts <- c(v_parts, v_piece)
+    v_pos <- m[k] + v_len[k]
+  }
+  if (v_pos <= nchar(s)) v_parts <- c(v_parts, q(substr(s, v_pos, nchar(s))))
+  paste(v_parts, collapse = "*")
+}
+
+# text (possibly two lines) -> plotmath source; usable with label_parsed
+f_chem_txt <- function(x) {
+  vapply(as.character(x), function(s) {
+    v_l <- vapply(strsplit(s, "\n", fixed = TRUE)[[1]], f_chem_line, "")
+    if (length(v_l) == 1) v_l else paste0("atop(", v_l[1], ",", v_l[2], ")")
+  }, "", USE.NAMES = FALSE)
+}
+
+# label for titles, axes, legend titles and legend keys: an expression when
+# the text holds a formula, otherwise the text unchanged
+f_chem_lab <- function(x) {
+  if (is.null(x) || all(is.na(x)) || !any(grepl(v_chem_re, x))) return(x)
+  parse(text = f_chem_txt(x))
+}
+
+# facet labeller with subscripts; one_line puts a two-line label on one line
+f_chem_labeller <- function(one_line = FALSE) {
+  as_labeller(function(x) f_chem_txt(if (one_line) gsub("\n", " ", x, fixed = TRUE) else x),
+              default = label_parsed)
+}
+
 # Panel builders ---------------------------------------------------------------
 
 # Year breaks used on the discrete year axes.
@@ -113,12 +163,13 @@ v_year_breaks <- as.character(seq(2020, 2100, 20))
 # The data selection is the one of f_fig_line1/2/4/5 in main.R.
 f_panel_line <- function(df_snap, v_var, v_title, pal, v_scen, v_marker, v_year1,
                          df_AR6 = NULL, df_dummy = NULL, zero_line = TRUE,
-                         v_ylab = NULL, v_ar6_cat = NULL) {
+                         v_ylab = NULL, v_ar6_cat = NULL, v_drop_model = NULL) {
   df1 <- df_snap %>%
     filter(Variable == v_var, Model == "AIM", Region == "World", Scenario_SSP %in% v_marker) %>%
     mutate(Scenario = factor(Scenario, levels = v_scen))
   df2 <- df_snap %>%
-    filter(Variable == v_var, Year %in% v_year1, Scenario == "LN", Region == "World")
+    filter(Variable == v_var, Year %in% v_year1, Scenario == "LN", Region == "World") %>%
+    filter(!(Model %in% v_drop_model))
   df3 <- df2 %>%
     summarise(max = max(Value), min = min(Value), .by = c(Scenario, Year, Region, Variable, Unit)) %>%
     mutate(Range = v_ln_range_label)
@@ -168,7 +219,7 @@ f_panel_line <- function(df_snap, v_var, v_title, pal, v_scen, v_marker, v_year1
     scale_colour_manual(values = pal, limits = v_scen, name = "Scenario (AIM)") +
     scale_fill_manual(values = setNames(unname(pal["LN"]), v_ln_range_label), name = NULL) +
     scale_x_discrete(breaks = v_breaks, limits = v_limits) +
-    labs(title = v_title, x = NULL, y = v_ylab) +
+    labs(title = f_chem_lab(v_title), x = NULL, y = f_chem_lab(v_ylab)) +
     guides(
       colour = guide_legend(order = 1, override.aes = list(linewidth = 0.8)),
       fill = guide_legend(order = 2)
@@ -197,11 +248,14 @@ f_panel_area <- function(df_snap, v_area, v_line, v_line_label, v_marker, pal_fi
     geom_area(data = df1, aes(x = Year, y = Value, group = Variable, fill = Variable), alpha = 0.85) +
     f_zero_line() +
     geom_line(data = df2, aes(x = Year, y = Value, group = Variable, linetype = Variable), linewidth = 0.5) +
-    scale_fill_manual(values = pal_fill, labels = setNames(v_fill_labels, v_area), name = v_fill_title) +
-    scale_linetype_manual(values = "solid", name = NULL) +
+    scale_fill_manual(
+      values = pal_fill, name = f_chem_lab(v_fill_title),
+      labels = function(b) f_chem_lab(setNames(v_fill_labels, v_area)[b])
+    ) +
+    scale_linetype_manual(values = "solid", name = NULL, labels = function(b) f_chem_lab(b)) +
     facet_wrap(~Scenario_SSP, nrow = 1, scales = "fixed") +
     scale_x_discrete(breaks = v_year_breaks) +
-    labs(x = NULL, y = v_ylab) +
+    labs(x = NULL, y = f_chem_lab(v_ylab)) +
     guides(fill = guide_legend(order = 1, ncol = 2), linetype = guide_legend(order = 2)) +
     theme_paper() +
     theme_x90() +
@@ -236,10 +290,13 @@ f_panel_bar <- function(df_snap, v_area, v_point, v_marker, v_scen_model, pal_fi
     geom_col(data = df1, aes(x = x, y = Value, fill = Variable), width = 0.8, alpha = 0.9) +
     f_zero_line() +
     geom_point(data = df3, aes(x = x, y = Value, shape = Total), size = 1.2, stroke = 0.5) +
-    scale_fill_manual(values = pal_fill, labels = setNames(v_fill_labels, v_area), name = v_fill_title) +
+    scale_fill_manual(
+      values = pal_fill, name = f_chem_lab(v_fill_title),
+      labels = function(b) f_chem_lab(setNames(v_fill_labels, v_area)[b])
+    ) +
     scale_shape_manual(values = 4, name = NULL) +
     facet_wrap(~Year, nrow = 1, scales = "fixed") +
-    labs(x = NULL, y = v_ylab) +
+    labs(x = NULL, y = f_chem_lab(v_ylab)) +
     guides(fill = guide_legend(order = 1, ncol = 1), shape = guide_legend(order = 2)) +
     theme_paper() +
     theme_x90() +
